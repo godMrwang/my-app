@@ -1,0 +1,8 @@
+# 允许所有搜索引擎抓取整个网站
+User-agent: *
+Disallow:
+
+# 指定站点地图（如果有的话）
+Sitemap: https://example.com/sitemap.xml
+
+1234
