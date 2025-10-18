@@ -1,86 +1,64 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
-// 自定义消息类型（用于 useState 类型约束）
-interface Message {
-  id: string;
-  user_id: string;
-  content: string;
-  created_at: string;
-}
+export default function Home() {
+  const [email, setEmail] = useState("");
+  const [token, setToken] = useState(""); // 新增验证码状态
 
-export default function MessagesPage() {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [content, setContent] = useState("");
-
-  useEffect(() => {
-    fetchMessages();
-  }, []);
-
-  // 获取留言列表
-  const fetchMessages = async () => {
-    // 这里不指定泛型，让 Supabase 推断类型
-    const { data, error } = await supabase
-      .from("messages")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (error) console.error(error);
-    else setMessages((data as Message[]) || []);
+  // 获取邮箱 OTP
+  const handleLogin = async () => {
+    const { error } = await supabase.auth.signInWithOtp({ email });
+    if (error) alert(error.message);
+    else alert("登录链接已发送到邮箱，请查收");
   };
 
-  // 添加新留言
-  const addMessage = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      alert("请先登录");
-      return;
-    }
+  // 验证 OTP
+  const handleVerify = async () => {
+    const { data, error } = await supabase.auth.verifyOtp({
+      email,
+      token,          // 用户输入的验证码
+      type: "email"   // 说明是邮箱 OTP
+    });
 
-    const { error } = await supabase.from("messages").insert([
-      { user_id: user.id, content },
-    ]);
-
-    if (error) console.error(error);
-    else {
-      setContent("");
-      fetchMessages();
-    }
+    if (error) alert(error.message);
+    else alert("验证成功，你已登录！");
   };
 
   return (
-    <main className="p-4 max-w-xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">留言板</h1>
+    <main className="flex flex-col items-center justify-center min-h-screen gap-2">
+      <h1 className="text-2xl font-bold mb-4">欢迎来到留言板</h1>
 
-      <div className="flex gap-2 mb-4">
-        <input
-          className="border p-2 flex-1 rounded"
-          type="text"
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="写点什么..."
-        />
-        <button
-          className="bg-green-500 text-white px-4 rounded"
-          onClick={addMessage}
-        >
-          发送
-        </button>
-      </div>
+      {/* 邮箱输入框 */}
+      <input
+        className="border p-2"
+        type="email"
+        placeholder="输入邮箱"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+      />
+      <button
+        className="bg-blue-500 text-white px-4 py-2 rounded"
+        onClick={handleLogin}
+      >
+        发送验证码
+      </button>
 
-      <ul>
-        {messages.map((msg) => (
-          <li key={msg.id} className="border-b py-2">
-            <div className="text-gray-700">{msg.content}</div>
-            <div className="text-xs text-gray-400">
-              {new Date(msg.created_at).toLocaleString()}
-            </div>
-          </li>
-        ))}
-      </ul>
+      {/* 验证码输入框 */}
+      <input
+        className="border p-2 mt-4"
+        type="text"
+        placeholder="输入收到的验证码"
+        value={token}
+        onChange={(e) => setToken(e.target.value)}
+      />
+      <button
+        className="bg-green-500 text-white px-4 py-2 rounded"
+        onClick={handleVerify}
+      >
+        验证登录
+      </button>
     </main>
   );
 }
-
